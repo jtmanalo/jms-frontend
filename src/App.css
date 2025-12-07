@@ -1,0 +1,27 @@
+/* Start Shift button hover/focus effect */
+.start-shift-btn:hover,
+.start-shift-btn:focus {
+  background: #007bff !important;
+  color: #fff !important;
+  border-color: #007bff !important;
+}
+
+/* End Shift button hover/focus effect */
+.end-shift-btn:hover,
+.end-shift-btn:focus {
+  background: #dc3545 !important;
+  color: #fff !important;
+  border-color: #dc3545 !important;
+}
+
+body {
+  background-color: aliceblue;
+}
+
+.custom-dark-modal .modal-content {
+  background: #232323 !important;
+  border-radius: 24px !important;
+  color: #fff !important;
+  border: none;
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.25);
+}
