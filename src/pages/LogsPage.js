@@ -10,6 +10,10 @@ function LogsPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [activeShiftError, setActiveShiftError] = useState('');
     const [selectedLog, setSelectedLog] = useState(null);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [password, setPassword] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [passwordError, setPasswordError] = useState('');
 
     // console.log('LogsPage shiftId:', shiftId);
 
@@ -60,6 +64,58 @@ function LogsPage() {
 
     const handleCloseModal = () => {
         setSelectedLog(null);
+    };
+
+    const handleVoidClick = () => {
+        setShowPasswordModal(true);
+        setPassword('');
+    };
+
+    const handlePasswordCancel = () => {
+        setShowPasswordModal(false);
+        setPassword('');
+        setPasswordError('');
+    };
+
+    const handlePasswordConfirm = async () => {
+        if (!password) {
+            setPasswordError('Please enter a password.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        setPasswordError('');
+
+        try {
+            console.log('Voiding transaction with ID:', selectedLog.TransactionID, password);
+            const response = await axios.post(
+                `${process.env.REACT_APP_BASE_URL}/api/transactions/void/${selectedLog.TransactionID}`,
+                { password },
+            );
+            console.log('Void response:', response.data);
+            alert('Transaction voided successfully.');
+            setShowPasswordModal(false);
+            setPassword('');
+            setPasswordError('');
+            setSelectedLog(null);
+
+            // Refresh logs
+            const logsResponse = await axios.get(`${process.env.REACT_APP_BASE_URL}/api/daily-logs/${shiftId}`);
+            const sortedLogs = logsResponse.data.sort((a, b) => new Date(b.TransactionDate) - new Date(a.TransactionDate));
+            setLogs(sortedLogs);
+        } catch (error) {
+            console.error('Error voiding transaction:', error.response?.data || error.message);
+
+            if (error.response?.status === 401) {
+                setPasswordError('Incorrect password. Please try again.');
+            } else if (error.response?.status === 404) {
+                setPasswordError('Transaction not found.');
+            } else {
+                setPasswordError(error.response?.data?.error || 'Failed to void transaction. Please try again.');
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -132,7 +188,43 @@ function LogsPage() {
                             <p><strong>Amount:</strong> ₱{selectedLog.TotalAmount}</p>
                         </Modal.Body>
                         <Modal.Footer>
+                            <Button variant="danger" onClick={handleVoidClick}>
+                                Void
+                            </Button>
                             <Button variant="secondary" onClick={handleCloseModal}>Close</Button>
+                        </Modal.Footer>
+                    </Modal>
+                )}
+
+                {showPasswordModal && (
+                    <Modal show={showPasswordModal} onHide={handlePasswordCancel} centered>
+                        <Modal.Header closeButton>
+                            <Modal.Title>Confirm Void Transaction</Modal.Title>
+                        </Modal.Header>
+                        <Modal.Body>
+                            <p>Enter owner password to confirm voiding this transaction.</p>
+                            <input
+                                type="password"
+                                className="form-control"
+                                placeholder="Owner Password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                disabled={isSubmitting}
+                                onKeyPress={(e) => e.key === 'Enter' && handlePasswordConfirm()}
+                            />
+                            {passwordError && (
+                                <div style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                                    {passwordError}
+                                </div>
+                            )}
+                        </Modal.Body>
+                        <Modal.Footer>
+                            <Button variant="secondary" onClick={handlePasswordCancel} disabled={isSubmitting}>
+                                Cancel
+                            </Button>
+                            <Button variant="danger" onClick={handlePasswordConfirm} disabled={isSubmitting || !password}>
+                                {isSubmitting ? 'Confirming...' : 'Confirm Void'}
+                            </Button>
                         </Modal.Footer>
                     </Modal>
                 )}

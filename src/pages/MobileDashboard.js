@@ -1,11 +1,11 @@
 import { Container, Modal, Form, Card, Button, Table, Spinner } from 'react-bootstrap';
 import { useNavigate, useLocation, Route, Routes } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { FaShoppingCart, FaMoneyBillWave, FaChartLine, FaFileInvoiceDollar, FaHandHoldingUsd, FaUserTie, FaBoxOpen, FaClock } from 'react-icons/fa';
+import { FaShoppingCart, FaMoneyBillWave, FaChartLine, FaFileInvoiceDollar, FaHandHoldingUsd, FaUserTie, FaBoxOpen, FaClock, FaPiggyBank } from 'react-icons/fa';
 import { ActiveTabCard, ButtonsCard } from '../components/Card';
 import CustomButton from '../components/CustomButton';
 import { MobileHeader } from '../components/Header';
-import { StartShiftModal, EndShiftConfirmModal } from '../components/Modal';
+import { StartShiftModal, EndShiftConfirmModal, AddCapitalModal } from '../components/Modal';
 import { useAuth } from '../services/AuthContext';
 import { DashboardProvider } from '../services/DashboardContext';
 import { useDashboard } from '../services/DashboardContext';
@@ -104,6 +104,7 @@ function MobileDashboard() {
   const [showModal, setShowModal] = useState(false);
   const [branch, setBranch] = useState('');
   const [startingCash, setStartingCash] = useState('1000.00');
+  const [notes, setNotes] = useState('');
   const [branchOptions, setBranchOptions] = useState([]);
   const [showSetBranchModal, setShowSetBranchModal] = useState(true);
   const [shiftId, setShiftId] = useState(null);
@@ -119,6 +120,7 @@ function MobileDashboard() {
   const [show, setShow] = useState(false);
   const [shiftEmployees, setShiftEmployees] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAddCapitalModal, setShowAddCapitalModal] = useState(false);
 
   const fetchShiftEmployees = async () => {
     try {
@@ -362,7 +364,7 @@ function MobileDashboard() {
       const initialCash = Number(startingCash);
       // console.log('Starting shift with:', { branchId, userId, initialCash });
 
-      const shiftData = await createShift(branchId, userId, initialCash, token);
+      const shiftData = await createShift(branchId, userId, initialCash, notes, token);
       setShiftId(shiftData.id);
 
       refreshBalance(branchId, userId);
@@ -604,6 +606,11 @@ function MobileDashboard() {
                     label: 'Debt',
                     icon: <FaFileInvoiceDollar size={28} color="#232323" />,
                     onClick: () => navigate(`/employee-dashboard/${user?.username}/debts`),
+                  },
+                  {
+                    label: 'Capital',
+                    icon: <FaPiggyBank size={28} color="#232323" />,
+                    onClick: () => setShowAddCapitalModal(true),
                   }
                 ]}
               />
@@ -672,6 +679,8 @@ function MobileDashboard() {
                 onClose={() => setShowModal(false)}
                 startingCash={startingCash}
                 setStartingCash={setStartingCash}
+                notes={notes}
+                setNotes={setNotes}
                 branch={branch}
                 setBranch={setBranch}
                 branchOptions={branchOptions}
@@ -696,6 +705,15 @@ function MobileDashboard() {
         token={token}
         onAddEmployee={() => setShowAddEmployeeModal(true)}
         shiftStarted={shiftStarted}
+      />
+      <AddCapitalModal
+        show={showAddCapitalModal}
+        onClose={() => setShowAddCapitalModal(false)}
+        shiftId={shiftId}
+        token={token}
+        branchId={actualBranchId}
+        userId={user?.userID}
+        onSuccess={() => refreshBalance(actualBranchId, user?.userID)}
       />
     </>
   );

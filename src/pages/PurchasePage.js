@@ -36,6 +36,7 @@ function PurchasePage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showBackModal, setShowBackModal] = useState(false);
+    const [itemSearchFilters, setItemSearchFilters] = useState({});
 
     const handleTrashClick = (idx) => {
         setDeleteIdx(idx);
@@ -213,6 +214,22 @@ function PurchasePage() {
         if (isValid) {
             setIsProcessing(true);
             try {
+                const totalAmount = items.reduce((sum, item) => sum + item.subtotal, 0);
+                const transactionDate = moment().tz('Asia/Manila').format('YYYY-MM-DD HH:mm:ss');
+
+                const receipt = {
+                    branchName: branchName,
+                    branchLocation: branchLocation,
+                    transactionDate: transactionDate,
+                    sellerName: seller,
+                    paymentMethod: selectedPaymentMethod,
+                    employeeName: user?.username,
+                    items: items,
+                    total: totalAmount,
+                    transactionType: 'Purchase',
+                    partyType: type,
+                };
+
                 setShowPaymentModal(true);
             } finally {
                 setIsProcessing(false);
@@ -254,8 +271,6 @@ function PurchasePage() {
                     subtotal: item.subtotal,
                 })),
             };
-            // console.log("Seller ID:", transactionData.sellerId);
-            // console.log('Transaction Data:', JSON.stringify(transactionData));
 
             const response = await axios.post(`${process.env.REACT_APP_BASE_URL}/api/purchases`, transactionData);
 
@@ -274,7 +289,6 @@ function PurchasePage() {
                 partyType: type,
             };
 
-            // console.log('Receipt Data:', receipt);
             setShowPaymentModal(false);
             setSeller('');
             setType('');
@@ -444,18 +458,83 @@ function PurchasePage() {
                                 </div>
                             )}
                             <div style={{ flex: 3, padding: '0.5rem 0', marginRight: '4px' }}>
-                                <Form.Select
-                                    value={item.name ? `${item.name}${item.classification ? ` - ${item.classification}` : ''}` : ''}
-                                    onChange={(e) => handleItemChange(idx, e.target.value)}
-                                    style={{ background: '#222', color: '#fff', border: 'none', borderBottom: '1px solid #343a40', fontFamily: 'inherit', fontSize: '1rem', letterSpacing: 1, textAlign: 'center' }}
-                                >
-                                    <option value="">Item</option>
-                                    {allItems.map((option) => (
-                                        <option key={option.ItemID} value={`${option.Name}${option.Classification ? ` - ${option.Classification}` : ''}`}>
-                                            {`${option.Name}${option.Classification ? ` - ${option.Classification}` : ''}`}
-                                        </option>
-                                    ))}
-                                </Form.Select>
+                                <div style={{ position: 'relative' }}>
+                                    <Form.Control
+                                        type="text"
+                                        value={itemSearchFilters[idx] || (item.name ? `${item.name}${item.classification ? ` - ${item.classification}` : ''}` : '')}
+                                        onChange={(e) => {
+                                            const newValue = e.target.value;
+                                            setItemSearchFilters({ ...itemSearchFilters, [idx]: newValue });
+                                            // If user clears the field, also clear the item
+                                            if (newValue === '' && item.name) {
+                                                const updatedItems = [...items];
+                                                updatedItems[idx] = {
+                                                    ...updatedItems[idx],
+                                                    name: '',
+                                                    classification: '',
+                                                    pricing: 0,
+                                                    subtotal: 0,
+                                                };
+                                                setItems(updatedItems);
+                                            }
+                                        }}
+                                        style={{
+                                            background: '#222',
+                                            color: item.name || itemSearchFilters[idx] ? '#fff' : '#999',
+                                            border: 'none',
+                                            borderBottom: '1px solid #343a40',
+                                            fontFamily: 'inherit',
+                                            fontSize: '1rem',
+                                            letterSpacing: 1,
+                                            textAlign: 'center'
+                                        }}
+                                    />
+                                    {itemSearchFilters[idx] && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            left: 0,
+                                            right: 0,
+                                            background: '#222',
+                                            color: '#fff',
+                                            maxHeight: '200px',
+                                            overflowY: 'auto',
+                                            zIndex: 100,
+                                            border: '1px solid #343a40',
+                                            borderTop: 'none',
+                                        }}>
+                                            {allItems
+                                                .filter(option =>
+                                                    `${option.Name}${option.Classification ? ` - ${option.Classification}` : ''}`.toLowerCase().includes(itemSearchFilters[idx].toLowerCase())
+                                                )
+                                                .slice(0, 10)
+                                                .map((option) => (
+                                                    <div
+                                                        key={option.ItemID}
+                                                        onClick={() => {
+                                                            handleItemChange(idx, `${option.Name}${option.Classification ? ` - ${option.Classification}` : ''}`);
+                                                            setItemSearchFilters({ ...itemSearchFilters, [idx]: '' });
+                                                        }}
+                                                        style={{
+                                                            padding: '0.5rem',
+                                                            cursor: 'pointer',
+                                                            borderBottom: '1px solid #343a40',
+                                                            fontSize: '0.9rem',
+                                                        }}
+                                                        onMouseEnter={(e) => e.target.style.background = '#343a40'}
+                                                        onMouseLeave={(e) => e.target.style.background = '#222'}
+                                                    >
+                                                        {`${option.Name}${option.Classification ? ` - ${option.Classification}` : ''}`}
+                                                    </div>
+                                                ))}
+                                            {allItems.filter(option =>
+                                                `${option.Name}${option.Classification ? ` - ${option.Classification}` : ''}`.toLowerCase().includes(itemSearchFilters[idx].toLowerCase())
+                                            ).length === 0 && (
+                                                    <div style={{ padding: '0.5rem', color: '#999' }}>No items found</div>
+                                                )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <div style={{ flex: 2, padding: '0.5rem 0', marginRight: '4px' }}>
                                 <Form.Control
@@ -538,37 +617,111 @@ function PurchasePage() {
                     </Button>
                 </Modal.Footer>
             </Modal>
-            <Modal show={showPaymentModal} centered onHide={() => setShowPaymentModal(false)}>
+            <Modal show={showPaymentModal} centered onHide={() => setShowPaymentModal(false)} size="lg">
                 <Modal.Header closeButton>
-                    <Modal.Title>Confirm Payment</Modal.Title>
+                    <Modal.Title>Review Receipt</Modal.Title>
                 </Modal.Header>
-                <Modal.Body>
-                    <Form.Group className="mb-3">
-                        <Form.Label>Payment Method</Form.Label>
-                        <Form.Select value={selectedPaymentMethod} onChange={(e) => setSelectedPaymentMethod(e.target.value)}>
-                            <option value="" disabled>Select Payment Method</option>
-                            <option value="cash">Cash</option>
-                            <option value="online transfer">Online Transfer</option>
-                            <option value="check">Check</option>
-                        </Form.Select>
-                    </Form.Group>
-                    <Form.Group className="mb-3">
-                        <Form.Label>Transaction Notes</Form.Label>
-                        <Form.Control
-                            as="textarea"
-                            rows={3}
-                            value={transactionNotes}
-                            onChange={(e) => setTransactionNotes(e.target.value)}
-                            placeholder="Optional notes..."
-                        />
-                    </Form.Group>
+                <Modal.Body style={{ background: '#f5f5f5', maxHeight: '60vh', overflowY: 'auto' }}>
+                    <div style={{ background: '#fff', padding: '2rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+                        {/* Receipt Header */}
+                        <div style={{ textAlign: 'center', marginBottom: '2rem', borderBottom: '2px solid #343a40', paddingBottom: '1rem' }}>
+                            <h4 style={{ fontWeight: 'bold', margin: '0 0 0.5rem 0' }}>PURCHASE RECEIPT</h4>
+                            <p style={{ margin: '0.25rem 0', fontSize: '0.9rem' }}>{branchName}</p>
+                            <p style={{ margin: '0.25rem 0', fontSize: '0.9rem' }}>{branchLocation}</p>
+                        </div>
+
+                        {/* Transaction Info */}
+                        <div style={{ marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                <span style={{ fontWeight: 500 }}>Date:</span>
+                                <span>{moment().tz('Asia/Manila').format('YYYY-MM-DD HH:mm:ss')}</span>
+                            </div>
+                            {type !== 'Extra' && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                    <span style={{ fontWeight: 500, textTransform: 'capitalize' }}>Seller:</span>
+                                    <span>{seller}</span>
+                                </div>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                <span style={{ fontWeight: 500 }}>Type:</span>
+                                <span>{type}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                <span style={{ fontWeight: 500 }}>Payment Method:</span>
+                                <span style={{ textTransform: 'capitalize' }}>{selectedPaymentMethod}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ fontWeight: 500 }}>Employee:</span>
+                                <span style={{ textTransform: 'capitalize' }}>{user?.username}</span>
+                            </div>
+                        </div>
+
+                        {/* Items Table */}
+                        <div style={{ marginBottom: '1.5rem', borderTop: '2px solid #343a40', borderBottom: '2px solid #343a40', paddingTop: '1rem', paddingBottom: '1rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '0.5rem', marginBottom: '1rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                                <div>Item</div>
+                                <div style={{ textAlign: 'center' }}>Unit Price</div>
+                                <div style={{ textAlign: 'center' }}>Qty</div>
+                                <div style={{ textAlign: 'right' }}>Subtotal</div>
+                            </div>
+                            {items.map((item, idx) => (
+                                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.9rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>
+                                    <div>{item.name}{item.classification ? ` - ${item.classification}` : ''}</div>
+                                    <div style={{ textAlign: 'center' }}>₱{(item.pricing || 0).toFixed(2)}</div>
+                                    <div style={{ textAlign: 'center' }}>{item.quantity}</div>
+                                    <div style={{ textAlign: 'right' }}>₱{(item.subtotal || 0).toFixed(2)}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Total */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem', fontSize: '1.1rem', fontWeight: 'bold', borderTop: '2px solid #343a40', paddingTop: '1rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', width: '50%' }}>
+                                <div>TOTAL:</div>
+                                <div style={{ textAlign: 'right' }}>₱{(items.reduce((sum, item) => sum + (parseFloat(item.subtotal) || 0), 0)).toFixed(2)}</div>
+                            </div>
+                        </div>
+
+                        {/* Notes */}
+                        {transactionNotes && (
+                            <div style={{ marginTop: '1rem', padding: '1rem', background: '#f0f0f0', borderRadius: '0.5rem', fontSize: '0.9rem' }}>
+                                <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Notes:</p>
+                                <p style={{ margin: 0 }}>{transactionNotes}</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Payment Method & Notes */}
+                    <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '0.5rem' }}>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Payment Method</Form.Label>
+                            <Form.Select value={selectedPaymentMethod} onChange={(e) => setSelectedPaymentMethod(e.target.value)} disabled={isSubmitting}>
+                                <option value="" disabled>Select Payment Method</option>
+                                <option value="cash">Cash</option>
+                                <option value="online transfer">Online Transfer</option>
+                                <option value="check">Check</option>
+                            </Form.Select>
+                        </Form.Group>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Transaction Notes</Form.Label>
+                            <Form.Control
+                                as="textarea"
+                                rows={3}
+                                value={transactionNotes}
+                                onChange={(e) => setTransactionNotes(e.target.value)}
+                                placeholder="Optional notes..."
+                                disabled={isSubmitting}
+                            />
+                        </Form.Group>
+                    </div>
                 </Modal.Body>
-                <Modal.Footer>
-                    <Button variant="primary" onClick={confirmPaymentMethod}
-                        disabled={!selectedPaymentMethod || isSubmitting}
-                    >
+                <Modal.Footer style={{ padding: '1rem' }}>
+                    <Button variant="secondary" onClick={() => setShowPaymentModal(false)} disabled={isSubmitting}>
+                        Cancel
+                    </Button>
+                    <Button variant="primary" onClick={confirmPaymentMethod} disabled={!selectedPaymentMethod || isSubmitting}>
                         {isSubmitting ? <Spinner animation="border" size="sm" className="me-2" /> : ''}
-                        {isSubmitting ? 'Processing...' : 'Confirm'}
+                        {isSubmitting ? 'Processing...' : 'Finalize'}
                     </Button>
                 </Modal.Footer>
             </Modal>
