@@ -22,6 +22,16 @@ function ShiftsPage() {
     const [showLogsModal, setShowLogsModal] = useState(false);
     const [isLoadingLogs, setIsLoadingLogs] = useState(false);
     const [selectedLog, setSelectedLog] = useState(null);
+    const [currentShiftForLogs, setCurrentShiftForLogs] = useState(null);
+    const [showCreateShiftModal, setShowCreateShiftModal] = useState(false);
+    const [newShiftData, setNewShiftData] = useState({
+        branchId: '',
+        userId: '',
+        startDatetime: moment().tz('Asia/Manila').subtract(1, 'day').format('YYYY-MM-DDTHH:mm'),
+        initialCash: '',
+        notes: ''
+    });
+    const [isCreatingShift, setIsCreatingShift] = useState(false);
 
     const fetchShiftLogs = async (shiftId) => {
         setIsLoadingLogs(true);
@@ -63,12 +73,89 @@ function ShiftsPage() {
 
     const handleViewLogs = async (shiftId) => {
         await fetchShiftLogs(shiftId);
+        // Find the shift object to pass to the modal
+        const shift = filteredShifts.find(s => s.ShiftID === shiftId);
+        setCurrentShiftForLogs(shift);
         setShowLogsModal(true);
     };
 
     const handleCloseLogsModal = () => {
         setShowLogsModal(false);
         setShiftLogs([]);
+        setCurrentShiftForLogs(null);
+    };
+
+    const handleEndShift = async (shiftId) => {
+        try {
+            await axios.put(
+                `${process.env.REACT_APP_BASE_URL}/api/shifts/${shiftId}`,
+                {},
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+            alert('Shift ended successfully!');
+            fetchShifts();
+        } catch (error) {
+            console.error('Error ending shift:', error.response?.data || error.message);
+            alert('Failed to end shift. Please try again.');
+        }
+    };
+
+    const handleOpenCreateShiftModal = () => {
+        setNewShiftData({
+            branchId: '',
+            userId: '',
+            startDatetime: moment().tz('Asia/Manila').subtract(1, 'day').format('YYYY-MM-DDTHH:mm'),
+            initialCash: '',
+            notes: ''
+        });
+        setShowCreateShiftModal(true);
+    };
+
+    const handleCloseCreateShiftModal = () => {
+        setShowCreateShiftModal(false);
+    };
+
+    const handleCreateShift = async () => {
+        if (!newShiftData.branchId || !newShiftData.userId || !newShiftData.initialCash) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        if (parseFloat(newShiftData.initialCash) <= 0) {
+            alert('Initial cash must be greater than 0');
+            return;
+        }
+
+        try {
+            setIsCreatingShift(true);
+            await axios.post(
+                `${process.env.REACT_APP_BASE_URL}/api/shifts`,
+                {
+                    branchId: parseInt(newShiftData.branchId),
+                    userId: parseInt(newShiftData.userId),
+                    startDatetime: newShiftData.startDatetime,
+                    initialCash: parseFloat(newShiftData.initialCash),
+                    notes: newShiftData.notes || ''
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+            alert('Shift created successfully!');
+            fetchShifts();
+            handleCloseCreateShiftModal();
+        } catch (error) {
+            console.error('Error creating shift:', error.response?.data || error.message);
+            alert('Failed to create shift. Please try again.');
+        } finally {
+            setIsCreatingShift(false);
+        }
     };
 
     // fetch employee details from table ( id, FirstName, LastName, Email, Phone, Position, BranchID, isActive )
@@ -230,6 +317,7 @@ function ShiftsPage() {
                                 ))}
                             </Form.Select>
                         </Form.Group>
+
                     </Form>
                 </div>
                 {isLoadingShifts ? (
@@ -283,6 +371,19 @@ function ShiftsPage() {
                                                 >
                                                     View Employees
                                                 </Button>
+                                                {!shift.EndDatetime && (
+                                                    <Button
+                                                        variant="outline-danger"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            if (window.confirm('Are you sure you want to end this shift?')) {
+                                                                handleEndShift(shift.ShiftID);
+                                                            }
+                                                        }}
+                                                    >
+                                                        End Shift
+                                                    </Button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))
@@ -299,6 +400,48 @@ function ShiftsPage() {
                     <Modal.Title>Transaction Logs</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
+                    {currentShiftForLogs && (
+                        <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.25rem' }}>Initial Cash</div>
+                                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>₱{parseFloat(currentShiftForLogs.InitialCash || 0).toFixed(2)}</div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.25rem' }}>Added Capital</div>
+                                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>₱{parseFloat(currentShiftForLogs.AddedCapital || 0).toFixed(2)}</div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.25rem' }}>Running Total</div>
+                                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>₱{parseFloat(currentShiftForLogs.RunningTotal || 0).toFixed(2)}</div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.25rem' }}>Calculated Final Cash</div>
+                                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
+                                        ₱{(parseFloat(currentShiftForLogs.InitialCash || 0) + parseFloat(currentShiftForLogs.AddedCapital || 0) - parseFloat(currentShiftForLogs.RunningTotal || 0)).toFixed(2)}
+                                    </div>
+                                </div>
+                                {currentShiftForLogs.FinalCash !== null && (
+                                    <div>
+                                        <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.25rem' }}>Actual Final Cash</div>
+                                        <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>₱{parseFloat(currentShiftForLogs.FinalCash).toFixed(2)}</div>
+                                    </div>
+                                )}
+                                {currentShiftForLogs.FinalCash !== null && (
+                                    <div>
+                                        <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.25rem' }}>Variance</div>
+                                        <div style={{
+                                            fontSize: '1.1rem',
+                                            fontWeight: 'bold',
+                                            color: Math.abs((parseFloat(currentShiftForLogs.InitialCash || 0) + parseFloat(currentShiftForLogs.AddedCapital || 0) - parseFloat(currentShiftForLogs.RunningTotal || 0)) - parseFloat(currentShiftForLogs.FinalCash)) < 0.01 ? '#28a745' : '#dc3545'
+                                        }}>
+                                            ₱{((parseFloat(currentShiftForLogs.InitialCash || 0) + parseFloat(currentShiftForLogs.AddedCapital || 0) - parseFloat(currentShiftForLogs.RunningTotal || 0)) - parseFloat(currentShiftForLogs.FinalCash || 0)).toFixed(2)}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                     {isLoadingLogs ? (
                         <div className="text-center">
                             <Spinner animation="border" role="status">
@@ -396,6 +539,99 @@ function ShiftsPage() {
                     </Modal.Footer>
                 </Modal>
             )}
+
+            {/* Create Shift Modal */}
+            <Modal show={showCreateShiftModal} onHide={handleCloseCreateShiftModal} centered backdrop="static" keyboard={false}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Create New Shift</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Branch <span style={{ color: 'red' }}>*</span></Form.Label>
+                            <Form.Select
+                                value={newShiftData.branchId}
+                                onChange={(e) => setNewShiftData({ ...newShiftData, branchId: e.target.value })}
+                                disabled={isCreatingShift}
+                            >
+                                <option value="">Select a branch</option>
+                                {branches.filter(b => b.id !== 'all').map((branch) => (
+                                    <option key={branch.id} value={branch.id}>{branch.displayName}</option>
+                                ))}
+                            </Form.Select>
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>Employee <span style={{ color: 'red' }}>*</span></Form.Label>
+                            <Form.Select
+                                value={newShiftData.userId}
+                                onChange={(e) => setNewShiftData({ ...newShiftData, userId: e.target.value })}
+                                disabled={isCreatingShift}
+                            >
+                                <option value="">Select an employee</option>
+                                {Array.isArray(employees) && employees.map((employee) => (
+                                    <option key={employee.UserID} value={employee.UserID}>
+                                        {employee.FirstName} {employee.LastName}
+                                    </option>
+                                ))}
+                            </Form.Select>
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>Start Date & Time <span style={{ color: 'red' }}>*</span></Form.Label>
+                            <Form.Control
+                                type="datetime-local"
+                                value={newShiftData.startDatetime}
+                                onChange={(e) => setNewShiftData({ ...newShiftData, startDatetime: e.target.value })}
+                                disabled={isCreatingShift}
+                            />
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>Initial Cash <span style={{ color: 'red' }}>*</span></Form.Label>
+                            <Form.Control
+                                type="number"
+                                step="0.01"
+                                placeholder="Enter initial cash amount"
+                                value={newShiftData.initialCash}
+                                onChange={(e) => setNewShiftData({ ...newShiftData, initialCash: e.target.value })}
+                                disabled={isCreatingShift}
+                            />
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>Notes (Optional)</Form.Label>
+                            <Form.Control
+                                as="textarea"
+                                rows={3}
+                                placeholder="Enter any notes..."
+                                value={newShiftData.notes}
+                                onChange={(e) => setNewShiftData({ ...newShiftData, notes: e.target.value })}
+                                disabled={isCreatingShift}
+                            />
+                        </Form.Group>
+                    </Form>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleCloseCreateShiftModal} disabled={isCreatingShift}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="success"
+                        onClick={handleCreateShift}
+                        disabled={isCreatingShift || !newShiftData.branchId || !newShiftData.userId || !newShiftData.initialCash}
+                    >
+                        {isCreatingShift ? (
+                            <>
+                                <Spinner animation="border" size="sm" className="me-2" />
+                                Creating...
+                            </>
+                        ) : (
+                            'Create Shift'
+                        )}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </div>
     );
 }

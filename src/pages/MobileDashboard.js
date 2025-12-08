@@ -1,7 +1,7 @@
 import { Container, Modal, Form, Card, Button, Table, Spinner } from 'react-bootstrap';
 import { useNavigate, useLocation, Route, Routes } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { FaShoppingCart, FaMoneyBillWave, FaChartLine, FaFileInvoiceDollar, FaHandHoldingUsd, FaUserTie, FaBoxOpen, FaClock, FaPiggyBank } from 'react-icons/fa';
+import { FaShoppingCart, FaMoneyBillWave, FaChartLine, FaFileInvoiceDollar, FaHandHoldingUsd, FaUserTie, FaBoxOpen, FaClock, FaPiggyBank, FaUserFriends } from 'react-icons/fa';
 import { ActiveTabCard, ButtonsCard } from '../components/Card';
 import CustomButton from '../components/CustomButton';
 import { MobileHeader } from '../components/Header';
@@ -25,6 +25,7 @@ import axios from 'axios';
 import ReceiptPage from './ReceiptPage';
 import PricelistPage from './ItemsTable';
 import PendingPurchase from './PendingPurchase';
+import moment from 'moment-timezone';
 
 function SetBranchModal({ show, branchOptions, onSetBranch }) {
   const [selectedBranch, setSelectedBranch] = useState(branchOptions[0] || '');
@@ -111,6 +112,7 @@ function MobileDashboard() {
   const [loading, setLoading] = useState(true);
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
   const [employees, setEmployees] = useState([]);
+  const [users, setUsers] = useState([]);
   const [showShiftEmployeesModal, setShowShiftEmployeesModal] = useState(false);
   const [balance, setBalance] = useState(0);
   const [totalPurchase, setTotalPurchase] = useState(0);
@@ -121,6 +123,15 @@ function MobileDashboard() {
   const [shiftEmployees, setShiftEmployees] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddCapitalModal, setShowAddCapitalModal] = useState(false);
+  const [showCreateShiftModal, setShowCreateShiftModal] = useState(false);
+  const [newShiftData, setNewShiftData] = useState({
+    branchId: '',
+    userId: '',
+    startDatetime: moment().tz('Asia/Manila').subtract(1, 'day').format('YYYY-MM-DDTHH:mm'),
+    initialCash: '',
+    notes: ''
+  });
+  const [isCreatingShift, setIsCreatingShift] = useState(false);
 
   const fetchShiftEmployees = async () => {
     try {
@@ -357,6 +368,24 @@ function MobileDashboard() {
     fetchEmployees();
   }, [token]);
 
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await axios.get(`${process.env.REACT_APP_BASE_URL}/api/users`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        setUsers(response.data);
+      } catch (error) {
+        console.error('Error fetching users:', error.response?.data || error.message);
+      }
+    };
+
+    fetchUsers();
+  }, [token, user]);
+
   const onSubmit = async () => {
     try {
       const branchId = branch.id;
@@ -458,6 +487,60 @@ function MobileDashboard() {
       refreshTotalSale(actualBranchId, user.userID);
     }
   }, [user, actualBranchId]);
+
+  const handleOpenCreateShiftModal = () => {
+    setNewShiftData({
+      branchId: branch?.id || '',
+      userId: user?.userID || '',
+      startDatetime: moment().tz('Asia/Manila').subtract(1, 'day').format('YYYY-MM-DDTHH:mm'),
+      initialCash: '',
+      notes: ''
+    });
+    setShowCreateShiftModal(true);
+  };
+
+  const handleCloseCreateShiftModal = () => {
+    setShowCreateShiftModal(false);
+  };
+
+  const handleCreateShift = async () => {
+    if (!newShiftData.branchId || !newShiftData.userId || !newShiftData.initialCash) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    if (parseFloat(newShiftData.initialCash) <= 0) {
+      alert('Initial cash must be greater than 0');
+      return;
+    }
+
+    try {
+      setIsCreatingShift(true);
+      await axios.post(
+        `${process.env.REACT_APP_BASE_URL}/api/shifts`,
+        {
+          branchId: parseInt(newShiftData.branchId),
+          userId: parseInt(newShiftData.userId),
+          startDatetime: newShiftData.startDatetime,
+          initialCash: parseFloat(newShiftData.initialCash),
+          notes: newShiftData.notes || ''
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      alert('Shift created successfully!');
+      handleCloseCreateShiftModal();
+      fetchActiveShift();
+    } catch (error) {
+      console.error('Error creating shift:', error.response?.data || error.message);
+      alert('Failed to create shift. Please try again.');
+    } finally {
+      setIsCreatingShift(false);
+    }
+  };
 
   if (loading) {
     return <LoadingScreen />;
@@ -564,21 +647,27 @@ function MobileDashboard() {
                 onClick: () => navigate(`/employee-dashboard/${user?.username}/loans`),
               },
               {
-                label: 'Buyer',
+                label: 'Buyers',
                 icon: <FaUserTie size={28} color="#232323" />,
                 onClick: () => navigate(`/employee-dashboard/${user?.username}/buyers`),
               },
               {
-                label: 'Item',
+                label: 'Items',
                 icon: <FaBoxOpen size={28} color="#232323" />,
                 onClick: () => navigate(`/employee-dashboard/${user?.username}/items`),
               },
               {
-                label: 'Shift',
-                icon: <FaClock size={28} color="#232323" />,
+                label: 'Employees',
+                icon: <FaUserFriends size={28} color="#232323" />,
                 onClick: () => setShowShiftEmployeesModal(true),
                 disabled: !shiftStarted
+
               },
+              ...(shiftStarted ? [] : [{
+                label: 'Shift',
+                icon: <FaClock size={28} color="#232323" />,
+                onClick: () => handleOpenCreateShiftModal(),
+              }]),
             ]}
           />
           <div style={{ height: 10 }} />
@@ -715,6 +804,100 @@ function MobileDashboard() {
         userId={user?.userID}
         onSuccess={() => refreshBalance(actualBranchId, user?.userID)}
       />
+
+      {/* Create Shift Modal */}
+      <Modal show={showCreateShiftModal} onHide={handleCloseCreateShiftModal} centered backdrop="static" keyboard={false}>
+        <Modal.Header closeButton>
+          <Modal.Title>Create New Shift</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>Branch <span style={{ color: 'red' }}>*</span></Form.Label>
+              <Form.Select
+                value={newShiftData.branchId}
+                onChange={(e) => setNewShiftData({ ...newShiftData, branchId: e.target.value })}
+                disabled={isCreatingShift}
+              >
+                <option value="">Select a branch</option>
+                {branchOptions.map((branchOption) => (
+                  <option key={branchOption.id} value={branchOption.id}>{branchOption.display}</option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Employee <span style={{ color: 'red' }}>*</span></Form.Label>
+              <Form.Select
+                value={newShiftData.userId}
+                onChange={(e) => setNewShiftData({ ...newShiftData, userId: e.target.value })}
+                disabled={isCreatingShift}
+              >
+                <option value="">Select an employee</option>
+                {Array.isArray(users) && users.map((userOption) => (
+                  <option key={userOption.UserID} value={userOption.UserID}>
+                    {userOption.Name || `${userOption.FirstName} ${userOption.LastName}`}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Start Date & Time <span style={{ color: 'red' }}>*</span></Form.Label>
+              <Form.Control
+                type="datetime-local"
+                value={newShiftData.startDatetime}
+                onChange={(e) => setNewShiftData({ ...newShiftData, startDatetime: e.target.value })}
+                disabled={isCreatingShift}
+                min={moment().tz('Asia/Manila').format('YYYY-MM-DDTHH:mm')}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Initial Cash <span style={{ color: 'red' }}>*</span></Form.Label>
+              <Form.Control
+                type="number"
+                step="0.01"
+                placeholder="Enter initial cash amount"
+                value={newShiftData.initialCash}
+                onChange={(e) => setNewShiftData({ ...newShiftData, initialCash: e.target.value })}
+                disabled={isCreatingShift}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Notes (Optional)</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                placeholder="Enter any notes..."
+                value={newShiftData.notes}
+                onChange={(e) => setNewShiftData({ ...newShiftData, notes: e.target.value })}
+                disabled={isCreatingShift}
+              />
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseCreateShiftModal} disabled={isCreatingShift}>
+            Cancel
+          </Button>
+          <Button
+            variant="success"
+            onClick={handleCreateShift}
+            disabled={isCreatingShift || !newShiftData.branchId || !newShiftData.userId || !newShiftData.initialCash}
+          >
+            {isCreatingShift ? (
+              <>
+                <Spinner animation="border" size="sm" className="me-2" />
+                Creating...
+              </>
+            ) : (
+              'Create Shift'
+            )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 }
