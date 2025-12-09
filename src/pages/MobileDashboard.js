@@ -849,7 +849,7 @@ function MobileDashboard() {
                 value={newShiftData.startDatetime}
                 onChange={(e) => setNewShiftData({ ...newShiftData, startDatetime: e.target.value })}
                 disabled={isCreatingShift}
-                min={moment().tz('Asia/Manila').format('YYYY-MM-DDTHH:mm')}
+                max={moment().tz('Asia/Manila').subtract(1, 'day').format('YYYY-MM-DDTHH:mm')}
               />
             </Form.Group>
 

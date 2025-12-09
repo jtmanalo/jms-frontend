@@ -263,13 +263,18 @@ function PurchasePage() {
                 status: 'completed',
                 notes: transactionNotes || '',
                 totalAmount,
-                items: items.map(item => ({
-                    itemId: allItems.find(i => i.Name === item.name).ItemID,
-                    classification: item.classification,
-                    quantity: item.quantity,
-                    itemPrice: item.pricing,
-                    subtotal: item.subtotal,
-                })),
+                items: items.map(item => {
+                    const matchedItem = allItems.find(i =>
+                        i.Name === item.name && (i.Classification || '') === (item.classification || '')
+                    );
+                    return {
+                        itemId: matchedItem?.ItemID,
+                        classification: item.classification,
+                        quantity: item.quantity,
+                        itemPrice: item.pricing,
+                        subtotal: item.subtotal,
+                    };
+                }),
             };
 
             const response = await axios.post(`${process.env.REACT_APP_BASE_URL}/api/purchases`, transactionData);

@@ -235,13 +235,18 @@ function SalePage() {
                 status: 'completed',
                 notes: transactionNotes || '',
                 totalAmount,
-                items: items.map(item => ({
-                    itemId: allItems.find(i => i.Name === item.name).ItemID,
-                    classification: item.classification,
-                    quantity: item.quantity,
-                    itemPrice: item.pricing,
-                    subtotal: item.subtotal,
-                })),
+                items: items.map(item => {
+                    const matchedItem = allItems.find(i =>
+                        i.Name === item.name && (i.Classification || '') === (item.classification || '')
+                    );
+                    return {
+                        itemId: matchedItem?.ItemID,
+                        classification: item.classification,
+                        quantity: item.quantity,
+                        itemPrice: item.pricing,
+                        subtotal: item.subtotal,
+                    };
+                }),
             };
             // console.log("Seller ID:", transactionData.sellerId);
             // console.log('Transaction Data:', JSON.stringify(transactionData));
