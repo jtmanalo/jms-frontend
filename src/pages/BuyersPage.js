@@ -104,7 +104,7 @@ function BuyersPage() {
 
             // Fetch formatted rows for main table from new endpoint
             try {
-                const formattedResponse = await axios.get(`${process.env.REACT_APP_BASE_URL}/api/buyers-with-prices-formatted`);
+                const formattedResponse = await axios.get(`${process.env.REACT_APP_BASE_URL}/api/buyers-with-prices`);
                 setRows(formattedResponse.data);
                 setFilteredRows(formattedResponse.data);
                 // console.log('Formatted Rows:', formattedResponse.data);

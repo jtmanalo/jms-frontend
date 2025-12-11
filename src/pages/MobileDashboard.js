@@ -297,21 +297,15 @@ function MobileDashboard() {
 
   const createShift = async (branchId, userId, initialCash, token) => {
     try {
-      const payload = {
-        branchId,
-        userId,
-        initialCash
-      };
       // console.log('Creating shift with payload:', payload);
       setIsSubmitting(true);
 
       const response = await axios.post(
         `${process.env.REACT_APP_BASE_URL}/api/shifts`,
-        payload,
         {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          branchId,
+          userId,
+          initialCash
         }
       );
       // console.log('Shift created successfully:', response.data);
