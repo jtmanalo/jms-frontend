@@ -306,7 +306,7 @@ function InventoryMatrixTable({ filteredItems, monthFilter, yearFilter, itemPric
                                         placement="right"
                                         delay={{ show: 100, hide: 400 }}
                                         overlay={renderHistoricalCostPopover(itemHoverData)}
-                                        onEnter={() => fetchHistoricalCostDetails(row.ItemID, finalTotalStock)}
+                                        onEnter={() => fetchHistoricalCostDetails(row.ItemID, finalTotalStock, startingStock)}
                                     >
                                         <span className="text-right table-dark font-weight-bold" style={{ cursor: 'pointer', textDecoration: 'underline' }}>
                                             {finalTotalStock.toFixed(2)}
