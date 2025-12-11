@@ -104,30 +104,35 @@ function BuyersPage() {
 
             // Fetch formatted rows for main table from new endpoint
             try {
-                const formattedResponse = await axios.get(`${process.env.REACT_APP_BASE_URL}/api/buyers-with-prices`);
+                const formattedResponse = await axios.get(`${process.env.REACT_APP_BASE_URL}/api/buyers-with-prices-formatted`);
                 setRows(formattedResponse.data);
                 setFilteredRows(formattedResponse.data);
-                // console.log('Formatted Rows:', formattedResponse.data);
+                console.log('Formatted Rows:', formattedResponse.data);
             } catch (error) {
-                // Fallback to frontend formatting if endpoint fails
-                console.warn('Using fallback table formatting:', error);
-                const formattedRows = response.data.map(buyer => {
-                    if (buyer.Name && buyer.CompanyName && buyer.Price) {
-                        return {
-                            buyerId: buyer.BuyerID,
-                            itemName: buyer.Name && buyer.Classification && buyer.UnitOfMeasurement
-                                ? `${buyer.Name} - ${buyer.Classification} (${buyer.UnitOfMeasurement})`
-                                : buyer.Name
-                                    ? `${buyer.Name} (${buyer.UnitOfMeasurement})`
-                                    : '',
-                            price: buyer.Price,
-                            companyName: buyer.CompanyName,
-                        };
-                    }
-                    return null;
-                }).filter(row => row !== null);
-                setRows(formattedRows);
-                setFilteredRows(formattedRows);
+                // Fallback to /buyers-with-prices if formatted endpoint fails
+                console.warn('Formatted endpoint failed, using fallback:', error);
+                try {
+                    const fallbackResponse = await axios.get(`${process.env.REACT_APP_BASE_URL}/api/buyers-with-prices`);
+                    const formattedRows = fallbackResponse.data.map(buyer => {
+                        if (buyer.Name && buyer.CompanyName && buyer.Price) {
+                            return {
+                                buyerId: buyer.BuyerID,
+                                itemName: buyer.Name && buyer.Classification && buyer.UnitOfMeasurement
+                                    ? `${buyer.Name} - ${buyer.Classification} (${buyer.UnitOfMeasurement})`
+                                    : buyer.Name
+                                        ? `${buyer.Name} (${buyer.UnitOfMeasurement})`
+                                        : '',
+                                price: buyer.Price,
+                                companyName: buyer.CompanyName,
+                            };
+                        }
+                        return null;
+                    }).filter(row => row !== null);
+                    setRows(formattedRows);
+                    setFilteredRows(formattedRows);
+                } catch (fallbackError) {
+                    console.error('Both endpoints failed:', fallbackError);
+                }
             }
             // console.log('Buyers:', formattedBuyers);
         } catch (error) {
