@@ -14,7 +14,7 @@ function PriceTrendGraph({ entityId, entityType, itemId }) {
 
         // The data must be sorted chronologically (ensured by SQL: ORDER BY UpdatedAt ASC)
         return rawData.map(point => ({
-            date: moment(point.UpdatedAt).tz('Asia/Manila').format('YYYY-MM-DD HH:mm'),
+            date: moment(point.UpdatedAt).tz('Asia/Manila').format('MMM DD, YYYY'),
             price: parseFloat(point.NewPrice),
         }));
     };
@@ -36,11 +36,11 @@ function PriceTrendGraph({ entityId, entityType, itemId }) {
 
                 if (formattedData.length > 0) {
                     const lastPoint = formattedData[formattedData.length - 1];
-                    const nowPoint = {
-                        date: moment().tz('Asia/Manila').format('YYYY-MM-DD HH:mm'),
-                        price: lastPoint.price
-                    };
-                    formattedData.push(nowPoint);
+                    // const nowPoint = {
+                    //     date: moment().tz('Asia/Manila').format('YYYY-MM-DD HH:mm'),
+                    //     price: lastPoint.price
+                    // };
+                    // formattedData.push(nowPoint);
                 }
 
                 setChartData(formattedData);

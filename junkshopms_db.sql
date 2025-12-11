@@ -4,6 +4,8 @@ CREATE TABLE user (
     PasswordHash VARCHAR(255) NOT NULL,
     UserType ENUM('owner', 'employee') NOT NULL,
     Email VARCHAR(100) UNIQUE,
+    BranchID INT(10) UNSIGNED,
+    Status ENUM('approved', 'pending', 'rejected'),
     CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE employee (
