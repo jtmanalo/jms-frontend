@@ -201,6 +201,7 @@ function ShiftsPage() {
         setIsLoadingShifts(true);
         try {
             const response = await axios.get(`${process.env.REACT_APP_BASE_URL}/api/shift-details`);
+            console.log('Fetched shifts:', response.data);
             setShifts(response.data);
         } catch (error) {
             console.error('Error fetching shifts:', error);
