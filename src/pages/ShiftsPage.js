@@ -350,9 +350,9 @@ function ShiftsPage() {
                                         <tr key={shift.ShiftID || `shift-${index}`}>
                                             <td>{shift.Branch}</td>
                                             <td>{shift.Name}</td>
-                                            <td>{moment(shift.StartDatetime).tz('Asia/Manila').format('MMMM DD YYYY, HH:mm')}</td>
+                                            <td>{moment(shift.StartDatetime).format('MMMM DD YYYY, HH:mm')}</td>
                                             <td>{shift.InitialCash}</td>
-                                            <td>{shift.EndDatetime ? moment(shift.EndDatetime).tz('Asia/Manila').format('MMMM DD YYYY, HH:mm') : 'Active'}</td>
+                                            <td>{shift.EndDatetime ? moment(shift.EndDatetime).format('MMMM DD YYYY, HH:mm') : 'Active'}</td>
                                             <td>{shift.FinalCash !== null ? shift.FinalCash : 'N/A'}</td>
                                             <td>
                                                 <Button
