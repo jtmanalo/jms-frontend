@@ -310,7 +310,7 @@ function MobileDashboard() {
       );
       // console.log('Shift created successfully:', response.data);
       refreshBalance(branchId, userId);
-      console.log('Shift', response.data);
+      // console.log('Shift', response.data);
       return response.data;
     } catch (error) {
       console.error('Error creating shift:', error.response?.data || error.message);
@@ -325,7 +325,7 @@ function MobileDashboard() {
       const payload = {
         shiftId
       };
-      // console.log('Ending shift with payload:', payload);
+      console.log('Ending shift with payload:', payload);
       setIsSubmitting(true);
       const response = await axios.put(
         `${process.env.REACT_APP_BASE_URL}/api/shifts/${shiftId}`,
@@ -336,7 +336,7 @@ function MobileDashboard() {
           }
         }
       );
-      // console.log('Shift ended successfully:', response.data);
+      console.log('Shift ended successfully:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error ending shift:', error.response?.data || error.message);
