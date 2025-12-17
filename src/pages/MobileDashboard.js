@@ -310,6 +310,7 @@ function MobileDashboard() {
       );
       // console.log('Shift created successfully:', response.data);
       refreshBalance(branchId, userId);
+      console.log('Shift', response.data);
       return response.data;
     } catch (error) {
       console.error('Error creating shift:', error.response?.data || error.message);

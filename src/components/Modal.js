@@ -99,7 +99,7 @@ export const AddCapitalModal = ({ show, onClose, shiftId, token, onSuccess, bran
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  console.log('AddCapitalModal props:', { show, shiftId, token, branchId, userId });
+  // console.log('AddCapitalModal props:', { show, shiftId, token, branchId, userId }); 
 
   const handleAddCapital = async () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -117,7 +117,7 @@ export const AddCapitalModal = ({ show, onClose, shiftId, token, onSuccess, bran
         userId,
       };
 
-      console.log('Sending add capital request with payload:', payload);
+      // console.log('Sending add capital request with payload:', payload);
       await axios.post(
         `${process.env.REACT_APP_BASE_URL}/api/shifts/${shiftId}/add-capital`,
         payload,

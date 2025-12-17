@@ -67,9 +67,9 @@ function PriceTrendGraph({ entityId, entityType, itemId }) {
                 <YAxis label={{ value: 'Price', angle: -90, position: 'insideLeft' }} domain={['auto', 'auto']} />
                 <Tooltip />
                 <Legend />
-                {/* The 'type="stepAfter"' attribute creates the stepped line graph */}
+                {/* The 'type="linear"' attribute creates diagonal lines between points */}
                 <Line
-                    type="stepAfter"
+                    type="linear"
                     dataKey="price"
                     stroke="#8884d8"
                     strokeWidth={2}

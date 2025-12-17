@@ -181,7 +181,7 @@ function InventoryMatrixTable({ filteredItems, monthFilter, yearFilter, itemPric
                             </p>
                             <hr />
                             <p>
-                                <strong>Combined Unit Cost:</strong> <span style={{ fontSize: '1.1em', fontWeight: 'bold' }}>₱{data.CombinedWAC}</span> per unit
+                                <strong>Average Unit Cost:</strong> <span style={{ fontSize: '1.1em', fontWeight: 'bold' }}>₱{data.CombinedWAC}</span> per unit
                             </p>
                             <p>
                                 <strong>Total Historical Stock Value:</strong>

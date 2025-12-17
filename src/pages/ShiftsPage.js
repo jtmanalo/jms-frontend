@@ -147,6 +147,7 @@ function ShiftsPage() {
                     }
                 }
             );
+            // console.log('startDatetime:', newShiftData.startDatetime);
             alert('Shift created successfully!');
             fetchShifts();
             handleCloseCreateShiftModal();
